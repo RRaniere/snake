@@ -13,8 +13,8 @@
 
 #define MAX_SCORE 255
 
-int CURRENT_LEVEL = 1;
-int FRAME_TIME = 110000;
+int current_level = 1;
+int frame_time = 110000;
 int screen_width = 50;
 int screen_height = 40;
 
@@ -25,7 +25,7 @@ typedef struct {
 vec2 head = {0, 0};
 vec2 segments[MAX_SCORE + 1];
 vec2 dir = {1, 0};
-vec2 berry, specialBerry;
+vec2 berry, special_berry;
 
 int score = 0;
 char score_message[16];
@@ -35,12 +35,14 @@ bool is_running = true;
 
 WINDOW *win;
 
-void reset_game_state() {
+void restart_game() {
     head = (vec2){0, 0};
     dir = (vec2){1, 0};
     score = 0;
-    is_running = true;
+    current_level = 1;
+    frame_time = 110000;
     sprintf(score_message, "[ Score: %d ]", score);
+    is_running = true;
 }
 
 void quit_game() {
@@ -71,38 +73,6 @@ void initialize_terminal() {
     srand(time(NULL));
 }
 
-void spawn_random_berries() {
-    berry = (vec2){rand() % screen_width, rand() % screen_height};
-    specialBerry = (vec2){rand() % screen_width, rand() % screen_height};
-}
-
-void initialize_game() {
-    initialize_terminal();
-    spawn_random_berries();
-    reset_game_state();
-}
-
-void process_input() {
-    int pressed = wgetch(win);
-    if (pressed == KEY_LEFT && dir.x != 1) dir = (vec2){-1, 0};
-    else if (pressed == KEY_RIGHT && dir.x != -1) dir = (vec2){1, 0};
-    else if (pressed == KEY_UP && dir.y != 1) dir = (vec2){0, -1};
-    else if (pressed == KEY_DOWN && dir.y != -1) dir = (vec2){0, 1};
-    else if (pressed == ' ') reset_game_state();
-    else if (pressed == '\e') quit_game();
-}
-
-bool collide(vec2 a, vec2 b) {
-    return a.x == b.x && a.y == b.y;
-}
-
-bool collide_snake_body(vec2 point) {
-    for (int i = 0; i < score; i++) {
-        if (collide(point, segments[i])) return true;
-    }
-    return false;
-}
-
 vec2 spawn_berry() {
     vec2 new_berry;
     do {
@@ -111,18 +81,18 @@ vec2 spawn_berry() {
     return new_berry;
 }
 
-void next_level() {
-    mvaddstr(screen_height / 2, screen_width - 5, "NEXT LEVEL!");
-    refresh();
-    usleep(1500000);
-
-    for (int i = 3; i >= 0; i--) {
-        mvprintw(screen_height / 2, (screen_width - 3), i > 0 ? "%d..." : "GO!", i);
-        refresh();
-        usleep(1000000);
+void handle_berry_collision(vec2 *target_berry, int score_increment) {
+    if (collide(head, *target_berry)) {
+        if (score < MAX_SCORE) {
+            score += score_increment;
+            sprintf(score_message, "[ Score: %d ]", score);
+        }
+        if (current_level * 10 <= score) {
+            current_level++;
+            next_level();
+        }
+        *target_berry = spawn_berry();
     }
-
-    FRAME_TIME -= FRAME_TIME * 0.2;
 }
 
 void update() {
@@ -138,21 +108,12 @@ void update() {
         is_running = false;
     }
 
-    if (collide(head, berry)) {
-        if (score < MAX_SCORE) score++;
-        if (score % 10 == 0) next_level();
-        berry = spawn_berry();
-    }
+    handle_berry_collision(&berry, 1);
+    handle_berry_collision(&special_berry, 5);
 
-    if (collide(head, specialBerry)) {
-        if (score < MAX_SCORE) score += 5;
-        if (CURRENT_LEVEL * 10 <= score) next_level();
-        specialBerry = spawn_berry();
-    }
-
-    sprintf(score_message, "[ Score: %d ]", score);
-    usleep(FRAME_TIME);
+    usleep(frame_time);
 }
+
 
 void draw_border(int y, int x, int width, int height) {
     mvaddch(y, x, ACS_ULCORNER);
