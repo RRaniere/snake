@@ -2,65 +2,88 @@
 //  snake.c
 //  Atividade Avaliativa
 //
-//  Created by Ramon Raniere on 12/11/24.
-//
 
 #include <curses.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <windows.h>
 
 #define MAX_SCORE 255
 
-int current_level = 1;
-int frame_time = 110000;
-int screen_width = 50;
-int screen_height = 40;
+int CURRENT_LEVEL = 1;
+int FRAME_TIME = 110000;
+int SCORE = 0;
+
+char SCORE_MESSAGE[16];
+bool SKIP = false;
+bool IS_RUNNING = true;
+
+int SCREEN_WIDTH = 50;
+int SCREEN_HEIGHT = 40;
+
+WINDOW *WIN;
 
 typedef struct {
-    int x, y;
+    int x;
+    int y;
 } vec2;
 
-vec2 head = {0, 0};
-vec2 segments[MAX_SCORE + 1];
-vec2 dir = {1, 0};
-vec2 berry, special_berry;
+vec2 HEAD = {0, 0};
+vec2 SEGMENTS[MAX_SCORE + 1];
+vec2 DIR = {1, 0};
 
-int score = 0;
-char score_message[16];
+vec2 BERRY;
+vec2 SPECIAL_BERRY;
 
-bool skip = false;
-bool is_running = true;
+void custom_usleep(__int64 usec) {
+    HANDLE timer;
+    LARGE_INTEGER ft;
 
-WINDOW *win;
+    ft.QuadPart = -(10 * usec);
+
+    timer = CreateWaitableTimer(NULL, TRUE, NULL);
+    SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);
+    WaitForSingleObject(timer, INFINITE);
+    CloseHandle(timer);
+}
 
 void restart_game() {
-    head = (vec2){0, 0};
-    dir = (vec2){1, 0};
-    score = 0;
-    current_level = 1;
-    frame_time = 110000;
-    sprintf(score_message, "[ Score: %d ]", score);
-    is_running = true;
+    HEAD.x = 0;
+    HEAD.y = 0;
+    DIR.x = 1; 
+    DIR.y = 0;
+    SCORE = 0;
+    CURRENT_LEVEL = 1;
+    FRAME_TIME = 110000;
+
+    BERRY = (vec2){rand() % SCREEN_WIDTH, rand() % SCREEN_HEIGHT};
+    SPECIAL_BERRY = (vec2){rand() % SCREEN_WIDTH, rand() % SCREEN_HEIGHT};
+
+    snprintf(SCORE_MESSAGE, sizeof(SCORE_MESSAGE), "[ Score: %d ]", SCORE);
+    IS_RUNNING = true;
 }
 
 void quit_game() {
     endwin();
-    printf("\e[1;1H\e[2j]]\e[?25h");
+    printf("\e[1;1H\e[2j]]");
+    printf("\e[?25h");
     exit(0);
 }
 
-void initialize_terminal() {
-    win = initscr();
-    keypad(win, true);
+void init() {
+    srand(time(NULL));
+    WIN = initscr();
+
+    keypad(WIN, true);
     noecho();
-    nodelay(win, true);
+    nodelay(WIN, true);
     curs_set(0);
 
-    if (!has_colors()) {
+    if (has_colors() == FALSE) {
         endwin();
-        fprintf(stderr, "Your terminal does not support color\n");
+        fprintf(stderr, "Your terminal does not support color \n");
         exit(1);
     }
 
@@ -70,86 +93,184 @@ void initialize_terminal() {
     init_pair(2, COLOR_GREEN, -1);
     init_pair(3, COLOR_YELLOW, -1);
 
-    srand(time(NULL));
+    BERRY = (vec2){rand() % SCREEN_WIDTH, rand() % SCREEN_HEIGHT};
+    SPECIAL_BERRY = (vec2){rand() % SCREEN_WIDTH, rand() % SCREEN_HEIGHT};
+
+    snprintf(SCORE_MESSAGE, sizeof(SCORE_MESSAGE), "[ Score: %d ]", SCORE);
 }
 
-vec2 spawn_berry() {
-    vec2 new_berry;
-    do {
-        new_berry = (vec2){rand() % (screen_width - 2) + 1, rand() % (screen_height - 2) + 1};
-    } while (collide(head, new_berry) || collide_snake_body(new_berry));
-    return new_berry;
-}
+void process_input() {
+    int pressed = wgetch(WIN);
 
-void handle_berry_collision(vec2 *target_berry, int score_increment) {
-    if (collide(head, *target_berry)) {
-        if (score < MAX_SCORE) {
-            score += score_increment;
-            sprintf(score_message, "[ Score: %d ]", score);
+    if (pressed == KEY_LEFT) {
+        if (DIR.x == 1) {
+            SKIP = true;
+            return;
         }
-        if (current_level * 10 <= score) {
-            current_level++;
-            next_level();
+        DIR.x = -1;
+        DIR.y = 0;
+    }
+    if (pressed == KEY_RIGHT) {
+        if (DIR.x == -1) {
+            SKIP = true;
+            return;
         }
-        *target_berry = spawn_berry();
+        DIR.x = 1;
+        DIR.y = 0;
+    }
+    if (pressed == KEY_UP) {
+        if (DIR.y == 1) {
+            SKIP = true;
+            return;
+        }
+        DIR.x = 0;
+        DIR.y = -1;
+    }
+    if (pressed == KEY_DOWN) {
+        if (DIR.y == -1) {
+            SKIP = true;
+            return;
+        }
+        DIR.x = 0;
+        DIR.y = 1;
+    }
+    if (pressed == ' ') {
+        if (!IS_RUNNING) {
+            restart_game();
+        }
+    }
+    if (pressed == '\e') {
+        IS_RUNNING = false;
+        quit_game();
     }
 }
 
-void update() {
-    for (int i = score; i > 0; i--) {
-        segments[i] = segments[i - 1];
-    }
-    segments[0] = head;
-
-    head.x += dir.x;
-    head.y += dir.y;
-
-    if (collide_snake_body(head) || head.x < 0 || head.y < 0 || head.x >= screen_width || head.y >= screen_height) {
-        is_running = false;
-    }
-
-    handle_berry_collision(&berry, 1);
-    handle_berry_collision(&special_berry, 5);
-
-    usleep(frame_time);
+bool collide(vec2 a, vec2 b) {
+    return (a.x == b.x && a.y == b.y);
 }
 
+bool collide_snake_body(vec2 point) {
+    for (int i = 0; i < SCORE; i++) {
+        if (collide(point, SEGMENTS[i])) {
+            return true;
+        }
+    }
+    return false;
+}
 
 void draw_border(int y, int x, int width, int height) {
     mvaddch(y, x, ACS_ULCORNER);
     mvaddch(y, x + width * 2 + 1, ACS_URCORNER);
-    mvhline(y, x + 1, ACS_HLINE, width * 2);
-    mvvline(y + 1, x, ACS_VLINE, height);
-    mvvline(y + 1, x + width * 2 + 1, ACS_VLINE, height);
+
+    for (int i = 1; i < width * 2 + 1; i++) {
+        mvaddch(y, x + i, ACS_HLINE);
+    }
+
+    for (int i = 1; i < height + 1; i++) {
+        mvaddch(y + i, x, ACS_VLINE);
+        mvaddch(y + i, x + width * 2 + 1, ACS_VLINE);
+    }
+
     mvaddch(y + height + 1, x, ACS_LLCORNER);
     mvaddch(y + height + 1, x + width * 2 + 1, ACS_LRCORNER);
-    mvhline(y + height + 1, x + 1, ACS_HLINE, width * 2);
+
+    for (int i = 1; i < width * 2 + 1; i++) {
+        mvaddch(y + height + 1, x + i, ACS_HLINE);
+    }
 }
 
-void draw_game() {
+void game_over() {
+    while (IS_RUNNING == false) {
+        process_input();
+
+        mvaddstr(SCREEN_HEIGHT / 2, SCREEN_WIDTH - 16, "            Game Over           ");
+        mvaddstr(SCREEN_HEIGHT / 2 + 3, SCREEN_WIDTH - 16, "[SPACE] to restart, [ESC] to quit");
+
+        custom_usleep(FRAME_TIME);
+    }
+}
+
+vec2 spawn_fruit(vec2 fruit) {
+    do {
+        fruit.x = 1 + rand() % (SCREEN_WIDTH - 2);
+        fruit.y = 1 + rand() % (SCREEN_HEIGHT - 2);
+    } while (collide(HEAD, fruit) || collide_snake_body(fruit));
+    return fruit;
+}
+
+void handle_fruit_collision(vec2 *fruit, int points) {
+    if (collide(HEAD, *fruit)) {
+        if (SCORE < MAX_SCORE) {
+            SCORE += points;
+            snprintf(SCORE_MESSAGE, sizeof(SCORE_MESSAGE), "[ Score: %d ]", SCORE);
+        }
+
+        if (SCORE >= CURRENT_LEVEL * 10) {
+            CURRENT_LEVEL++;
+            mvaddstr(SCREEN_HEIGHT / 2, SCREEN_WIDTH - 5, "NEXT LEVEL!");
+            refresh();
+            custom_usleep(1500000);
+            FRAME_TIME = FRAME_TIME * 0.8 > 30000 ? FRAME_TIME * 0.8 : 30000;
+        }
+
+        *fruit = spawn_fruit(*fruit);
+    }
+}
+
+void update() {
+    for (int i = SCORE; i > 0; i--) {
+        SEGMENTS[i] = SEGMENTS[i - 1];
+    }
+    SEGMENTS[0] = HEAD;
+
+    HEAD.x += DIR.x;
+    HEAD.y += DIR.y;
+
+    if (collide_snake_body(HEAD) || HEAD.x < 0 || HEAD.y < 0 || HEAD.x >= SCREEN_WIDTH || HEAD.y >= SCREEN_HEIGHT) {
+        IS_RUNNING = false;
+        return;
+    }
+
+    handle_fruit_collision(&BERRY, 1);
+    handle_fruit_collision(&SPECIAL_BERRY, 5);
+
+    custom_usleep(FRAME_TIME);
+}
+
+void draw() {
     erase();
-    mvaddch(berry.y + 1, berry.x * 2 + 1, ACS_DIAMOND);
+
+    mvaddch(BERRY.y + 1, BERRY.x * 2 + 1, ACS_DIAMOND);
+
     attron(COLOR_PAIR(1));
-    mvaddch(specialBerry.y + 1, specialBerry.x * 2 + 1, ACS_DIAMOND);
+    mvaddch(SPECIAL_BERRY.y + 1, SPECIAL_BERRY.x * 2 + 1, ACS_DIAMOND);
     attroff(COLOR_PAIR(1));
+
     attron(COLOR_PAIR(2));
-    for (int i = 0; i < score; i++) mvaddch(segments[i].y + 1, segments[i].x * 2 + 1, ACS_DIAMOND);
-    mvaddch(head.y + 1, head.x * 2 + 1, 'O');
+    for (int i = 0; i < SCORE; i++) {
+        mvaddch(SEGMENTS[i].y + 1, SEGMENTS[i].x * 2 + 1, ACS_DIAMOND);
+    }
+    mvaddch(HEAD.y + 1, HEAD.x * 2 + 1, 'O');
     attroff(COLOR_PAIR(2));
+
     attron(COLOR_PAIR(3));
-    draw_border(0, 0, screen_width, screen_height);
+    draw_border(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     attroff(COLOR_PAIR(3));
-    mvaddstr(0, screen_width - 5, score_message);
+    mvaddstr(0, SCREEN_WIDTH - 5, SCORE_MESSAGE);
 }
 
 int main(void) {
-    initialize_game();
+    init();
 
     while (true) {
         process_input();
-        if (skip) { skip = false; continue; }
+        if (SKIP == true) {
+            SKIP = false;
+            continue;
+        }
+
         update();
-        draw_game();
+        draw();
     }
 
     quit_game();
