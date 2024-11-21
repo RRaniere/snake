@@ -18,24 +18,23 @@
 int current_level = 1;
 int frame_time = 110000;
 
-typedef struct {
-    
-    int x;
-    int y;
-    
-} vec2;
-
 int score = 0;
 char score_message[16];
 
 bool skip = false;
 bool is_running = true;
 
-
 int screen_width = 50;
 int screen_height = 40;
 
 WINDOW *win;
+
+typedef struct {
+    
+    int x;
+    int y;
+    
+} vec2;
 
 vec2 head = { 0 , 0 };
 vec2 segments[MAX_SCORE + 1];
@@ -195,7 +194,6 @@ void draw_border(int y, int x, int width, int height) {
         mvaddch(y + height + 1, x + i, ACS_HLINE);
     }
 
-
 }
 
 void game_over() { 
@@ -209,7 +207,6 @@ void game_over() {
         usleep(frame_time);
 
     }
-
 
 }
 
@@ -240,6 +237,7 @@ vec2 spawn_special_berry() {
 
 
 void next_level() {
+
     mvaddstr(screen_height / 2, (screen_width - 5), "NEXT LEVEL!");
     refresh(); 
     usleep(1500000);  
@@ -254,11 +252,9 @@ void next_level() {
         }else{ 
             mvaddstr(screen_height / 2, (screen_width - 3), "GO!");
         }
-     
 
         refresh(); 
         usleep(1000000); 
-
 
     }
     
@@ -313,7 +309,6 @@ void update() {
 
     usleep(frame_time);
 
-
 }
 
 
@@ -339,14 +334,12 @@ void draw() {
     attroff(COLOR_PAIR(3));
     mvaddstr(0, screen_width - 5, score_message);
 
-
 }
 
 
 int main(void) {
     
     init();
-
 
     while (true) {
         
@@ -364,6 +357,5 @@ int main(void) {
     quit_game();
 
     return 0;
-    
     
 }
