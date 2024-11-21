@@ -15,8 +15,8 @@
 
 #define MAX_SCORE 255
 
-int CURRENT_LEVEL = 1;
-int FRAME_TIME = 110000;
+int current_level = 1;
+int frame_time = 110000;
 
 typedef struct {
     
@@ -53,7 +53,8 @@ void restart_game() {
     score = 0;
     sprintf(score_message, "[ Score: %d ]", score);
     is_running = true;
-
+    current_level = 1;
+    frame_time = 110000;
 
 }
 
@@ -205,7 +206,7 @@ void game_over() {
         mvaddstr(screen_height / 2  , screen_width - 16, "            Game Over           ");
         mvaddstr(screen_height / 2 + 3, screen_width - 16, "[SPACE] to restart, [ESC] to quit");
 
-        usleep(FRAME_TIME);
+        usleep(frame_time);
 
     }
 
@@ -263,7 +264,7 @@ void next_level() {
     
     refresh();
 
-    FRAME_TIME = FRAME_TIME - (FRAME_TIME * 0.2);
+    frame_time = frame_time  - (frame_time  * 0.2);
     
 }
 
@@ -288,7 +289,7 @@ void update() {
             sprintf(score_message, "[ Score : %d ]", score);
         }
         if(score % 10 == 0) { 
-            CURRENT_LEVEL++;
+            current_level++;
             next_level();  
         }
 
@@ -301,8 +302,8 @@ void update() {
             sprintf(score_message, "[ Score : %d ]", score);
         }
 
-        if(CURRENT_LEVEL * 10 <= score) { 
-            CURRENT_LEVEL++;
+        if(current_level * 10 <= score) { 
+            current_level++;
             next_level();  
         }
 
@@ -310,7 +311,7 @@ void update() {
 
     }
 
-    usleep(FRAME_TIME);
+    usleep(frame_time);
 
 
 }
