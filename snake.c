@@ -12,11 +12,7 @@
 #include <stdio.h>
 #include <time.h>
  
-
 WINDOW *win;
-
-#define MAX_SCORE 255
-#define MAX_OBSTACLES 50
 
 int current_level = 1;
 int frame_time = 110000;
@@ -29,10 +25,8 @@ bool skip = false;
 bool is_running = true;
 bool showing_scoreboard = true;
 
-
 int screen_width = 50;
 int screen_height = 40;
-
 
 vec2 head = { 0 , 0 };
 vec2 segments[MAX_SCORE + 1];
@@ -40,7 +34,6 @@ vec2 dir = { 1 , 0 };
 
 vec2 berry;
 vec2 specialBerry;
-
 
 vec2 obstacles[MAX_OBSTACLES];
 int obstacle_count;
@@ -69,7 +62,6 @@ void quit_game() {
     exit(0);
 
 }
-
 
 void load_level() {
     switch (current_level) {
@@ -123,11 +115,7 @@ void init() {
     specialBerry.y = rand() % screen_height;
 
     sprintf(score_message, "[ Score: %d ]", score);
-
-
-
 }
-
 
 void process_input() { 
 
@@ -195,7 +183,6 @@ void menu() {
 
 }
 
-
 bool collide(vec2 a, vec2 b) { 
 
     if(a.x == b.x && a.y == b.y) { 
@@ -205,18 +192,18 @@ bool collide(vec2 a, vec2 b) {
 
 }
 
-
 bool collide_snake_body(vec2 point) { 
 
-   for(int i = 0; i < score; i++) { 
-    if(collide(point, segments[i])) { 
-        return true;
+    for(int i = 0; i < score; i++) { 
+
+        if(collide(point, segments[i])) { 
+            return true;
+        }
+
     }
-   }
    return false;
 
 }
-
 
 bool collide_obstacles(vec2 point) {
     for (int i = 0; i < obstacle_count; i++) {
@@ -226,7 +213,6 @@ bool collide_obstacles(vec2 point) {
     }
     return false;
 }
-
 
 void draw_border(int y, int x, int width, int height) { 
 
@@ -268,10 +254,9 @@ void set_scoreboard() {
         }
     }
 
-    fwrite(scoreboard, sizeof(int), 3, file); // Escreve os dados do array no arquivo
+    fwrite(scoreboard, sizeof(int), 3, file); 
     fclose(file);
 }
-
 
 void get_scoreboard() {
     FILE *file = fopen("scoreboard", "rb"); 
@@ -282,7 +267,6 @@ void get_scoreboard() {
     fread(scoreboard, sizeof(int), 3, file); 
     fclose(file); 
 }
-
 
 void game_over() { 
 
@@ -306,9 +290,6 @@ void game_over() {
 
 }
 
-
-
-
 vec2 spawn_berry() { 
 
     vec2 berry = { 1 + rand() % (screen_width - 2 ), 1 + rand() % (screen_height - 2)};
@@ -331,10 +312,7 @@ vec2 spawn_special_berry() {
 
 }
 
-
-
 void next_level() {
-
 
     load_level();
     draw();
@@ -360,8 +338,6 @@ void next_level() {
     }
     
     refresh();
-
-    
 }
 
 
@@ -395,7 +371,6 @@ void update() {
     }
 
     if(collide(head, specialBerry)) { 
-
 
         if(score < MAX_SCORE) { 
             score += 5;
@@ -440,7 +415,6 @@ void draw() {
             mvaddch(segments[i].y + 1, segments[i].x * 2 +1, '1');
         }
 
-
     }
     mvaddch(head.y+1, head.x * 2+1, 'O');
     attroff(COLOR_PAIR(2));
@@ -452,21 +426,17 @@ void draw() {
 
     attron(COLOR_PAIR(2));
     for (int i = 0; i < obstacle_count; i++) {
-        // if(obstacles[i].y > 0 && obstacles[i].x > 0) { 
             mvaddch(obstacles[i].y + 1, obstacles[i].x *2+1, ACS_BLOCK); 
-        // }
     }
     attroff(COLOR_PAIR(2));
 
 }
-
 
 int main(void) {
     
     get_scoreboard();
     init();
     menu();
-
 
     while (true) {
         
@@ -478,7 +448,6 @@ int main(void) {
 
         update();
         draw();
-
 
     }
     

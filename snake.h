@@ -11,7 +11,6 @@ typedef struct {
     int y;
 } vec2;
 
-// Variáveis globais
 extern int current_level;
 extern int frame_time;
 extern int scoreboard[3];
