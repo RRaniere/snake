@@ -162,6 +162,28 @@ void process_input() {
        is_running = false;
        quit_game();
     }
+    if (pressed == '\n' && !is_running) {  
+
+         while(is_running == false) { 
+
+            process_input();
+
+                mvaddstr(screen_height / 2  , screen_width - 5, "                 ");
+                mvaddstr(screen_height / 2 + 3, screen_width - 14, "                                 ");
+
+                mvaddstr(screen_height / 3, screen_width - 16, "            SCOREBOARD           ");
+
+                mvprintw(screen_height / 3 + 3, screen_width - 6, "1º Place - %d", scoreboard[0]);
+                mvprintw(screen_height / 3 + 4, screen_width - 6, "2º Place - %d", scoreboard[1]);
+                mvprintw(screen_height / 3 + 5, screen_width - 6, "3º Place - %d", scoreboard[2]);
+
+                mvaddstr(screen_height / 2 + 3, screen_width - 15, "[SPACE] to restart, [ESC] to quit");
+
+            usleep(frame_time);
+
+        }
+        
+    }
 
 }
 
@@ -175,7 +197,7 @@ void menu() {
         process_input();
 
         mvaddstr(screen_height / 2  , screen_width - 5, "BINARY SNAKE");
-        mvaddstr(screen_height / 2 + 3, screen_width - 6, "[SPACE] to play");
+        mvaddstr(screen_height / 2 + 3, screen_width - 14, "[SPACE] to play, [ENTER] to score");
 
         usleep(frame_time);
 
