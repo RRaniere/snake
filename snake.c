@@ -35,8 +35,25 @@ vec2 dir = { 1 , 0 };
 vec2 berry;
 vec2 specialBerry;
 
-vec2 obstacles[MAX_OBSTACLES];
-int obstacle_count;
+vec2* obstacles = NULL;
+int* obstacle_count = NULL;
+
+void init_obstacle_count(int initial_value) {
+    if (obstacle_count == NULL) {
+        obstacle_count = (int*)malloc(sizeof(int));
+        if (obstacle_count == NULL) {
+            exit(EXIT_FAILURE);
+        }
+    }
+    *obstacle_count = initial_value;
+}
+
+void cleanup_obstacle_count() {
+    if (obstacle_count != NULL) {
+        free(obstacle_count);
+        obstacle_count = NULL;
+    }
+}
 
 void restart_game() { 
 
@@ -49,7 +66,7 @@ void restart_game() {
     is_running = true;
     current_level = 1;
     frame_time = 110000;
-    obstacle_count = 0;
+    init_obstacle_count(0);
 
 }
 
@@ -228,11 +245,16 @@ bool collide_snake_body(vec2 point) {
 }
 
 bool collide_obstacles(vec2 point) {
-    for (int i = 0; i < obstacle_count; i++) {
+    if (obstacle_count == NULL || *obstacle_count == 0) {
+        return false;
+    }
+
+    for (int i = 0; i < *obstacle_count; i++) {
         if (collide(point, obstacles[i])) {
-            return true;
+            return true; 
         }
     }
+
     return false;
 }
 
@@ -447,8 +469,10 @@ void draw() {
     mvaddstr(0, screen_width - 5, score_message);
 
     attron(COLOR_PAIR(2));
-    for (int i = 0; i < obstacle_count; i++) {
-            mvaddch(obstacles[i].y + 1, obstacles[i].x *2+1, ACS_BLOCK); 
+    if (obstacle_count != NULL && *obstacle_count > 0) {
+        for (int i = 0; i < *obstacle_count; i++) {
+            mvaddch(obstacles[i].y + 1, obstacles[i].x * 2 + 1, ACS_BLOCK);
+        }
     }
     attroff(COLOR_PAIR(2));
 

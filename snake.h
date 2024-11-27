@@ -21,13 +21,13 @@ extern bool is_running;
 extern bool showing_scoreboard;
 extern int screen_width;
 extern int screen_height;
-extern int obstacle_count;
+extern int* obstacle_count; 
 extern vec2 head;
 extern vec2 segments[MAX_SCORE + 1];
 extern vec2 dir;
 extern vec2 berry;
 extern vec2 specialBerry;
-extern vec2 obstacles[MAX_OBSTACLES];
+extern vec2* obstacles;
 
 void init();
 void restart_game();
